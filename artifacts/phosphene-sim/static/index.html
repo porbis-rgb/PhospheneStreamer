@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Phosphene Vision Simulator</title>
+  <link rel="stylesheet" href="/static/style.css" />
+</head>
+<body>
+  <div class="container">
+    <header>
+      <h1>Phosphene Vision Simulator</h1>
+      <p class="subtitle">Real-time bionic vision simulation</p>
+    </header>
+
+    <div class="viewport">
+      <canvas id="display" width="512" height="512"></canvas>
+      <div id="overlay" class="overlay">
+        <span id="status-text">Connecting…</span>
+      </div>
+    </div>
+
+    <div class="stats">
+      <span id="fps-counter">FPS: —</span>
+      <span id="source-label">Source: —</span>
+      <span id="frame-counter">Frames: 0</span>
+    </div>
+
+    <div class="controls">
+      <button id="toggle-btn">Pause</button>
+      <label>
+        Scale
+        <input type="range" id="scale-slider" min="1" max="8" value="4" />
+        <span id="scale-val">4×</span>
+      </label>
+    </div>
+  </div>
+
+  <script src="/static/script.js"></script>
+</body>
+</html>
