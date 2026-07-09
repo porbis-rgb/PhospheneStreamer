@@ -5,16 +5,19 @@
   const statusText = document.getElementById("status-text");
   const fpsEl = document.getElementById("fps-counter");
   const framesEl = document.getElementById("frame-counter");
-  const sourceEl = document.getElementById("source-label");
+  const modeLabelEl = document.getElementById("mode-label");
+  const modeDescEl = document.getElementById("mode-desc");
   const toggleBtn = document.getElementById("toggle-btn");
+  const modeRawBtn = document.getElementById("mode-raw");
+  const modeEdgeBtn = document.getElementById("mode-edge");
 
   const W = 128, H = 128;
-  const CANVAS_W = canvas.width;
-  const CANVAS_H = canvas.height;
-  const CELL = CANVAS_W / W;
+  const CW = canvas.width, CH = canvas.height;
+  const CELL = CW / W;
 
   let paused = false;
   let ws = null;
+  let currentMode = "raw";
   let totalFrames = 0;
   let fpsCount = 0;
   let lastFpsTime = performance.now();
@@ -34,32 +37,40 @@
     green:   (a) => `rgba(0,255,120,${a})`,
     magenta: (a) => `rgba(220,0,255,${a})`,
   };
+  const colorFn = (a) => (COLORS[params.color] || COLORS.cyan)(a);
 
-  function colorFn(a) {
-    return (COLORS[params.color] || COLORS.cyan)(a);
-  }
-
-  function bindSlider(id, valId, key, fmt) {
+  function bindSlider(id, valId, key, transform, fmt) {
     const slider = document.getElementById(id);
-    const valEl  = document.getElementById(valId);
+    const valEl = document.getElementById(valId);
     slider.addEventListener("input", () => {
-      params[key] = parseFloat(slider.value);
+      params[key] = transform(parseFloat(slider.value));
       valEl.textContent = fmt(params[key]);
     });
   }
 
-  bindSlider("size-slider",    "size-val",    "sizeMultiplier", v => v.toFixed(1) + "×");
-  bindSlider("dropout-slider", "dropout-val", "dropout",        v => Math.round(v) + "%");
-  bindSlider("jitter-slider",  "jitter-val",  "jitter",         v => v.toFixed(1) + " px");
-  bindSlider("decay-slider",   "decay-val",   "decay",          v => v.toFixed(2));
-
-  document.getElementById("dropout-slider").addEventListener("input", function () {
-    params.dropout = parseFloat(this.value) / 100;
-  });
-
+  bindSlider("size-slider",    "size-val",    "sizeMultiplier", v => v,      v => v.toFixed(1) + "×");
+  bindSlider("dropout-slider", "dropout-val", "dropout",        v => v / 100, v => Math.round(v * 100) + "%");
+  bindSlider("jitter-slider",  "jitter-val",  "jitter",         v => v,      v => v.toFixed(1) + " px");
+  bindSlider("decay-slider",   "decay-val",   "decay",          v => v,      v => v.toFixed(2));
   document.getElementById("color-select").addEventListener("change", function () {
     params.color = this.value;
   });
+
+  function setMode(mode) {
+    currentMode = mode;
+    modeLabelEl.textContent = mode;
+    modeRawBtn.classList.toggle("active", mode === "raw");
+    modeEdgeBtn.classList.toggle("active", mode === "edge");
+    modeDescEl.textContent = mode === "edge"
+      ? "ONNX Sobel edge map → phosphenes on contours"
+      : "Full grayscale intensity → phosphenes";
+    if (ws && ws.readyState === WebSocket.OPEN) {
+      ws.send(mode);
+    }
+  }
+
+  modeRawBtn.addEventListener("click", () => setMode("raw"));
+  modeEdgeBtn.addEventListener("click", () => setMode("edge"));
 
   const offscreen = document.createElement("canvas");
   offscreen.width = W;
@@ -73,9 +84,7 @@
         offCtx.drawImage(img, 0, 0, W, H);
         const data = offCtx.getImageData(0, 0, W, H).data;
         const gray = new Uint8Array(W * H);
-        for (let i = 0; i < W * H; i++) {
-          gray[i] = data[i * 4];
-        }
+        for (let i = 0; i < W * H; i++) gray[i] = data[i * 4];
         resolve(gray);
       };
       img.src = "data:image/png;base64," + b64;
@@ -84,7 +93,7 @@
 
   function renderPhosphenes(gray) {
     ctx.fillStyle = `rgba(0,0,0,${(1 - params.decay).toFixed(3)})`;
-    ctx.fillRect(0, 0, CANVAS_W, CANVAS_H);
+    ctx.fillRect(0, 0, CW, CH);
 
     for (let y = 0; y < H; y++) {
       for (let x = 0; x < W; x++) {
@@ -98,7 +107,6 @@
 
         const jx = (Math.random() * 2 - 1) * params.jitter;
         const jy = (Math.random() * 2 - 1) * params.jitter;
-
         const cx = x * CELL + CELL / 2 + jx;
         const cy = y * CELL + CELL / 2 + jy;
 
@@ -115,18 +123,6 @@
     }
   }
 
-  function updateStats() {
-    totalFrames++;
-    fpsCount++;
-    framesEl.textContent = totalFrames;
-    const now = performance.now();
-    if (now - lastFpsTime >= 1000) {
-      fpsEl.textContent = (fpsCount / ((now - lastFpsTime) / 1000)).toFixed(1);
-      fpsCount = 0;
-      lastFpsTime = now;
-    }
-  }
-
   function getWsUrl() {
     const proto = location.protocol === "https:" ? "wss" : "ws";
     return `${proto}://${location.host}/stream`;
@@ -139,14 +135,22 @@
 
     ws.onopen = () => {
       overlay.classList.add("hidden");
-      sourceEl.textContent = "stream";
+      ws.send(currentMode);
     };
 
     ws.onmessage = async (event) => {
       if (paused) return;
       const gray = await extractGray(event.data);
       renderPhosphenes(gray);
-      updateStats();
+      totalFrames++;
+      fpsCount++;
+      framesEl.textContent = totalFrames;
+      const now = performance.now();
+      if (now - lastFpsTime >= 1000) {
+        fpsEl.textContent = (fpsCount / ((now - lastFpsTime) / 1000)).toFixed(1);
+        fpsCount = 0;
+        lastFpsTime = now;
+      }
     };
 
     ws.onerror = () => {
@@ -176,6 +180,6 @@
   });
 
   ctx.fillStyle = "#000";
-  ctx.fillRect(0, 0, CANVAS_W, CANVAS_H);
+  ctx.fillRect(0, 0, CW, CH);
   connect();
 })();

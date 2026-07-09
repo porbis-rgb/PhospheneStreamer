@@ -22,7 +22,16 @@
       </div>
 
       <aside class="panel">
-        <div class="panel-header">Controls</div>
+        <div class="panel-header">Mode</div>
+
+        <div class="mode-toggle">
+          <button id="mode-raw" class="mode-btn active">Raw</button>
+          <button id="mode-edge" class="mode-btn">Edge Only</button>
+        </div>
+        <p id="mode-desc" class="mode-desc">Full grayscale intensity → phosphenes</p>
+
+        <div class="divider"></div>
+        <div class="panel-header">Rendering</div>
 
         <div class="control-group">
           <label for="size-slider">
@@ -74,7 +83,7 @@
         <div class="stats">
           <div class="stat"><span class="stat-label">FPS</span><span id="fps-counter">—</span></div>
           <div class="stat"><span class="stat-label">Frames</span><span id="frame-counter">0</span></div>
-          <div class="stat"><span class="stat-label">Source</span><span id="source-label">—</span></div>
+          <div class="stat"><span class="stat-label">Mode</span><span id="mode-label">raw</span></div>
         </div>
 
         <div class="divider"></div>

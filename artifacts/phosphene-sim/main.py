@@ -1,7 +1,11 @@
 import asyncio
 import base64
+import os
 import cv2
 import numpy as np
+import onnx
+import onnxruntime as ort
+from onnx import helper, TensorProto, numpy_helper
 from fastapi import FastAPI, WebSocket, WebSocketDisconnect
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse
@@ -11,6 +15,51 @@ app = FastAPI()
 FRAME_WIDTH = 128
 FRAME_HEIGHT = 128
 FPS_TARGET = 20
+MODEL_PATH = os.path.join(os.path.dirname(__file__), "edge_model.onnx")
+
+
+def build_edge_model(path: str) -> None:
+    kx = np.array([[-1, 0, 1], [-2, 0, 2], [-1, 0, 1]], dtype=np.float32).reshape(1, 1, 3, 3)
+    ky = np.array([[-1, -2, -1], [0, 0, 0], [1, 2, 1]], dtype=np.float32).reshape(1, 1, 3, 3)
+    div_val = np.array([1440.0], dtype=np.float32)
+    thresh = np.array([0.04], dtype=np.float32)
+
+    nodes = [
+        helper.make_node("Conv", ["x", "kx"], ["gx"], pads=[1, 1, 1, 1]),
+        helper.make_node("Conv", ["x", "ky"], ["gy"], pads=[1, 1, 1, 1]),
+        helper.make_node("Mul", ["gx", "gx"], ["gx2"]),
+        helper.make_node("Mul", ["gy", "gy"], ["gy2"]),
+        helper.make_node("Add", ["gx2", "gy2"], ["mag2"]),
+        helper.make_node("Sqrt", ["mag2"], ["mag"]),
+        helper.make_node("Div", ["mag", "div_val"], ["mag_norm"]),
+        helper.make_node("Greater", ["mag_norm", "thresh"], ["edge_bool"]),
+        helper.make_node("Cast", ["edge_bool"], ["edges"], to=TensorProto.FLOAT),
+    ]
+    initializers = [
+        numpy_helper.from_array(kx, "kx"),
+        numpy_helper.from_array(ky, "ky"),
+        numpy_helper.from_array(div_val, "div_val"),
+        numpy_helper.from_array(thresh, "thresh"),
+    ]
+    input_ = helper.make_tensor_value_info("x", TensorProto.FLOAT, [1, 1, 128, 128])
+    output = helper.make_tensor_value_info("edges", TensorProto.FLOAT, [1, 1, 128, 128])
+    graph = helper.make_graph(nodes, "sobel_edge", [input_], [output], initializer=initializers)
+    model = helper.make_model(graph, opset_imports=[helper.make_opsetid("", 13)])
+    model.ir_version = 7
+    onnx.checker.check_model(model)
+    onnx.save(model, path)
+
+
+if not os.path.exists(MODEL_PATH):
+    build_edge_model(MODEL_PATH)
+
+_ort_session = ort.InferenceSession(MODEL_PATH, providers=["CPUExecutionProvider"])
+
+
+def run_edge_detection(gray: np.ndarray) -> np.ndarray:
+    inp = gray.astype(np.float32)[np.newaxis, np.newaxis, :, :]
+    (edges,) = _ort_session.run(None, {"x": inp})
+    return (edges[0, 0] * 255).astype(np.uint8)
 
 
 def get_test_frame(tick: int) -> np.ndarray:
@@ -22,7 +71,7 @@ def get_test_frame(tick: int) -> np.ndarray:
     cv2.rectangle(frame, (5, 5), (35, 35), 160, 2)
     cv2.line(frame, (0, FRAME_HEIGHT // 2), (FRAME_WIDTH, FRAME_HEIGHT // 2), 80, 1)
     gradient = np.linspace(0, 100, FRAME_WIDTH, dtype=np.uint8)
-    frame[FRAME_HEIGHT - 10 : FRAME_HEIGHT - 5, :] = gradient
+    frame[FRAME_HEIGHT - 10: FRAME_HEIGHT - 5, :] = gradient
     return frame
 
 
@@ -46,6 +95,18 @@ async def stream(ws: WebSocket):
     except Exception:
         pass
 
+    mode = {"value": "raw"}
+
+    async def recv_loop():
+        try:
+            while True:
+                msg = await ws.receive_text()
+                if msg in ("edge", "raw"):
+                    mode["value"] = msg
+        except Exception:
+            pass
+
+    recv_task = asyncio.create_task(recv_loop())
     tick = 0
     delay = 1.0 / FPS_TARGET
 
@@ -55,16 +116,18 @@ async def stream(ws: WebSocket):
 
             if use_webcam and cap and cap.isOpened():
                 ret, raw = cap.read()
+                gray = cv2.cvtColor(raw, cv2.COLOR_BGR2GRAY) if ret else get_test_frame(tick)
                 if ret:
-                    gray = cv2.cvtColor(raw, cv2.COLOR_BGR2GRAY)
                     gray = cv2.resize(gray, (FRAME_WIDTH, FRAME_HEIGHT))
-                else:
-                    gray = get_test_frame(tick)
             else:
                 gray = get_test_frame(tick)
 
-            b64 = encode_frame(gray)
-            await ws.send_text(b64)
+            if mode["value"] == "edge":
+                output_frame = run_edge_detection(gray)
+            else:
+                output_frame = gray
+
+            await ws.send_text(encode_frame(output_frame))
 
             elapsed = asyncio.get_event_loop().time() - start
             await asyncio.sleep(max(0, delay - elapsed))
@@ -73,6 +136,7 @@ async def stream(ws: WebSocket):
     except WebSocketDisconnect:
         pass
     finally:
+        recv_task.cancel()
         if cap:
             cap.release()
 

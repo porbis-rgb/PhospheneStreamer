@@ -6,6 +6,8 @@ requires-python = ">=3.12"
 dependencies = [
     "fastapi>=0.139.0",
     "numpy>=2.5.1",
+    "onnx>=1.22.0",
+    "onnxruntime>=1.27.0",
     "opencv-python-headless>=5.0.0.93",
     "python-multipart>=0.0.32",
     "uvicorn[standard]>=0.51.0",
