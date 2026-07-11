@@ -267,3 +267,97 @@ button:hover {
   canvas { width: 100%; height: auto; aspect-ratio: 1; }
   .panel { min-width: unset; width: 100%; }
 }
+
+.implant-btn {
+  width: 100%;
+  padding: 9px 0;
+  background: rgba(124,58,237,0.15);
+  color: #a78bfa;
+  border: 1px solid #7c3aed;
+  border-radius: 4px;
+  font-family: inherit;
+  font-size: 0.75rem;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  cursor: pointer;
+  transition: background 0.2s, box-shadow 0.2s;
+}
+.implant-btn:hover:not(:disabled) {
+  background: rgba(124,58,237,0.28);
+  box-shadow: 0 0 12px rgba(124,58,237,0.3);
+}
+.implant-btn:disabled { opacity: 0.5; cursor: default; }
+
+.implant-panel {
+  margin-top: 16px;
+  background: var(--surface);
+  border: 1px solid #7c3aed;
+  border-radius: var(--radius);
+  overflow: hidden;
+  box-shadow: 0 0 20px rgba(124,58,237,0.2);
+}
+.implant-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 8px 14px;
+  background: rgba(124,58,237,0.15);
+  font-size: 0.68rem;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: #a78bfa;
+}
+.implant-close {
+  background: none;
+  border: none;
+  color: var(--muted);
+  font-size: 0.9rem;
+  cursor: pointer;
+  padding: 0 4px;
+  width: auto;
+  letter-spacing: 0;
+}
+.implant-body {
+  display: flex;
+  gap: 16px;
+  padding: 14px;
+  flex-wrap: wrap;
+}
+.implant-col { flex: 1; min-width: 140px; }
+.implant-section-label {
+  font-size: 0.6rem;
+  color: var(--muted);
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  margin-bottom: 6px;
+}
+.implant-grid {
+  font-family: "JetBrains Mono", monospace;
+  font-size: 1.1rem;
+  letter-spacing: 0.3em;
+  line-height: 1.6;
+  color: #a78bfa;
+  background: var(--surface2);
+  padding: 10px 12px;
+  border-radius: 4px;
+  margin: 0;
+}
+.implant-stats {
+  font-size: 0.65rem;
+  color: var(--muted);
+  margin-top: 6px;
+}
+.implant-log {
+  font-family: "JetBrains Mono", monospace;
+  font-size: 0.62rem;
+  line-height: 1.6;
+  color: #86efac;
+  background: var(--surface2);
+  padding: 10px 12px;
+  border-radius: 4px;
+  margin: 0;
+  white-space: pre-wrap;
+  word-break: break-all;
+  max-height: 160px;
+  overflow-y: auto;
+}

@@ -312,6 +312,82 @@
     }
   });
 
+  // ── Implant button ───────────────────────────────────────────────────────
+  const implantBtn   = document.getElementById("implant-btn");
+  const implantPanel = document.getElementById("implant-panel");
+  const implantClose = document.getElementById("implant-close");
+  const implantGrid  = document.getElementById("implant-grid");
+  const implantLog   = document.getElementById("implant-log");
+  const implantStats = document.getElementById("implant-stats");
+
+  const ELEC = 8; // 8×8 electrode grid
+  const BLOCK = W / ELEC; // 128/8 = 16 pixels per electrode cell
+  const DURATION_US = 400;
+
+  function frameToPackets(gray) {
+    const packets = [];
+    for (let er = 0; er < ELEC; er++) {
+      for (let ec = 0; ec < ELEC; ec++) {
+        let sum = 0;
+        for (let py = er * BLOCK; py < (er + 1) * BLOCK; py++) {
+          for (let px = ec * BLOCK; px < (ec + 1) * BLOCK; px++) {
+            sum += gray[py * W + px];
+          }
+        }
+        const avg = sum / (BLOCK * BLOCK);
+        if (avg > 10) {
+          packets.push({
+            electrode_id: er * ELEC + ec,
+            amplitude: Math.round((avg / 255) * 180), // scale to ≤180 (safe)
+            duration_us: DURATION_US,
+          });
+        }
+      }
+    }
+    return packets;
+  }
+
+  implantBtn.addEventListener("click", async () => {
+    // Capture current frame from canvas
+    const imageData = ctx.getImageData(0, 0, CW, CH);
+    // Downsample CW×CH → W×H grayscale via offscreen
+    offCtx.drawImage(canvas, 0, 0, W, H);
+    const small = offCtx.getImageData(0, 0, W, H).data;
+    const gray = new Uint8Array(W * H);
+    for (let i = 0; i < W * H; i++) {
+      gray[i] = (0.299 * small[i*4] + 0.587 * small[i*4+1] + 0.114 * small[i*4+2]) | 0;
+    }
+
+    const packets = frameToPackets(gray);
+    implantBtn.textContent = "⚡ Sending…";
+    implantBtn.disabled = true;
+
+    try {
+      const res = await fetch("/implant", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ packets }),
+      });
+      const data = await res.json();
+
+      implantGrid.textContent = data.grid;
+      implantStats.textContent =
+        `Electrodes fired: ${data.total - data.rejected} / ${ELEC*ELEC}   Rejected: ${data.rejected}`;
+      implantLog.textContent = data.logs.join("\n") || "(no log entries)";
+      implantPanel.style.display = "block";
+    } catch (e) {
+      implantLog.textContent = "Error: " + e.message;
+      implantPanel.style.display = "block";
+    } finally {
+      implantBtn.textContent = "⚡ Implant Frame";
+      implantBtn.disabled = false;
+    }
+  });
+
+  implantClose.addEventListener("click", () => {
+    implantPanel.style.display = "none";
+  });
+
   // ── Init ─────────────────────────────────────────────────────────────────
   ctx.fillStyle = "#000";
   ctx.fillRect(0, 0, CW, CH);

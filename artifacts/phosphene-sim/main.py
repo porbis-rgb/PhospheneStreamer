@@ -8,7 +8,13 @@ import onnxruntime as ort
 from onnx import helper, TensorProto, numpy_helper
 from fastapi import FastAPI, WebSocket, WebSocketDisconnect
 from fastapi.staticfiles import StaticFiles
-from fastapi.responses import FileResponse
+from fastapi.responses import FileResponse, JSONResponse
+from pydantic import BaseModel
+from typing import List
+import sys, pathlib
+sys.path.insert(0, str(pathlib.Path(__file__).parent))
+from src.electrodes import reset_array
+from src.firmware_sim import simulate_from_streamer, ascii_grid
 
 app = FastAPI()
 
@@ -139,6 +145,32 @@ async def stream(ws: WebSocket):
         recv_task.cancel()
         if cap:
             cap.release()
+
+
+class ImplantPacket(BaseModel):
+    electrode_id: int
+    amplitude: int
+    duration_us: int
+
+class ImplantRequest(BaseModel):
+    packets: List[ImplantPacket]
+
+@app.post("/implant")
+async def implant(req: ImplantRequest):
+    reset_array()
+    logs = []
+    rejected = 0
+    for pkt in req.packets:
+        result = simulate_from_streamer(pkt.model_dump())
+        logs.extend(result["log"])
+        if not result["ok"]:
+            rejected += 1
+    return JSONResponse({
+        "grid": ascii_grid(),
+        "logs": logs,
+        "total": len(req.packets),
+        "rejected": rejected,
+    })
 
 
 app.mount("/static", StaticFiles(directory="static"), name="static")

@@ -103,7 +103,30 @@
         <div class="divider"></div>
 
         <button id="toggle-btn">Pause</button>
+
+        <div class="divider"></div>
+
+        <button id="implant-btn" class="implant-btn">⚡ Implant Frame</button>
       </aside>
+    </div>
+
+    <!-- Implant output panel — hidden until button pressed -->
+    <div id="implant-panel" class="implant-panel" style="display:none">
+      <div class="implant-header">
+        <span>Virtual Implant Firmware Output</span>
+        <button id="implant-close" class="implant-close">✕</button>
+      </div>
+      <div class="implant-body">
+        <div class="implant-col">
+          <div class="implant-section-label">8×8 Electrode Grid (0=off, 9=max)</div>
+          <pre id="implant-grid" class="implant-grid"></pre>
+          <div id="implant-stats" class="implant-stats"></div>
+        </div>
+        <div class="implant-col">
+          <div class="implant-section-label">Firmware Log</div>
+          <pre id="implant-log" class="implant-log"></pre>
+        </div>
+      </div>
     </div>
   </div>
 
