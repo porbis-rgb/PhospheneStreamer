@@ -1,0 +1,80 @@
+rompt:  
+Build a very small, minimal‑credit virtual implant firmware simulator that integrates directly with my existing Phosphene Streamer project.
+
+Goal:  
+Simulate how a cortical implant firmware would receive stimulation commands from Phosphene Streamer, apply simple safety checks, update a virtual electrode array, and display a phosphene field. This is a software‑only educational simulation.
+
+Integration:  
+Phosphene Streamer will call a single Python function:
+simulate_from_streamer(packet: dict)  
+where packet = { "electrode_id": int, "amplitude": int, "duration_us": int }.
+
+Project structure (keep extremely small):
+
+src/electrodes.py
+
+src/firmware_sim.py
+
+src/packets.py
+
+src/main.py
+
+tests/test_sim.py
+
+Requirements (minimal versions):
+
+Electrode Array Model
+
+Represent an 8×8 grid using a simple list or dict.
+
+Store last amplitude + last activation time.
+
+StimCommand
+
+A tiny dataclass: StimCommand(electrode_id, amplitude, duration_us).
+
+Function apply_command(cmd) updates electrode state.
+
+Safety Logic
+
+Reject amplitude > MAX_SAFE_AMPLITUDE.
+
+Simple thermal rule: if same electrode is stimulated too frequently, print a warning.
+
+Log a “charge balancing” pulse by printing it.
+
+Packet Parsing
+
+Convert the dict/JSON from Phosphene Streamer into a StimCommand.
+
+Phosphene Visualization (ASCII only)
+
+Print an ASCII 8×8 grid showing activation intensity (0–9).
+
+No HTML, no JS, no Canvas.
+
+API/CLI
+
+In main.py, create a simple CLI that runs a few sample stimulations.
+
+Also expose simulate_from_streamer(packet) so Phosphene Streamer can import and call it.
+
+Tests (minimal)
+
+2–3 pytest tests verifying:
+
+Safety checks reject unsafe amplitudes
+
+Packet parsing produces correct StimCommand
+
+Electrode state updates correctly
+
+Constraints:
+
+Keep the entire project extremely small and simple.
+
+Avoid unnecessary abstractions or comments.
+
+Produce the full scaffold and implementation in one response to minimize credit usage.
+
+Focus on making the simulator callable directly from Phosphene Streamer with no extra setup.
