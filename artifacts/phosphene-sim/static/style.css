@@ -148,6 +148,18 @@ canvas {
   margin-top: -4px;
 }
 
+.camera-selector-wrap {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+
+.camera-status {
+  font-size: 0.62rem;
+  color: #f97316;
+  min-height: 14px;
+}
+
 .control-group {
   display: flex;
   flex-direction: column;

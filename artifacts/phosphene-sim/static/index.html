@@ -22,8 +22,22 @@
       </div>
 
       <aside class="panel">
-        <div class="panel-header">Mode</div>
 
+        <!-- SOURCE -->
+        <div class="panel-header">Source</div>
+        <div class="mode-toggle">
+          <button id="src-server" class="mode-btn active">Test Pattern</button>
+          <button id="src-camera" class="mode-btn">📷 Camera</button>
+        </div>
+        <div id="camera-selector-wrap" class="camera-selector-wrap" style="display:none">
+          <select id="device-select"><option value="">Detecting cameras…</option></select>
+          <span id="camera-status" class="camera-status"></span>
+        </div>
+
+        <div class="divider"></div>
+
+        <!-- PROCESSING MODE -->
+        <div class="panel-header">Mode</div>
         <div class="mode-toggle">
           <button id="mode-raw" class="mode-btn active">Raw</button>
           <button id="mode-edge" class="mode-btn">Edge Only</button>
@@ -31,6 +45,8 @@
         <p id="mode-desc" class="mode-desc">Full grayscale intensity → phosphenes</p>
 
         <div class="divider"></div>
+
+        <!-- RENDERING -->
         <div class="panel-header">Rendering</div>
 
         <div class="control-group">
@@ -66,9 +82,7 @@
         </div>
 
         <div class="control-group">
-          <label for="color-select">
-            <span>Phosphene Color</span>
-          </label>
+          <label for="color-select"><span>Phosphene Color</span></label>
           <select id="color-select">
             <option value="cyan">Cyan</option>
             <option value="amber">Amber</option>
