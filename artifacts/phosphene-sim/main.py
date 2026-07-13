@@ -173,9 +173,10 @@ async def implant(req: ImplantRequest):
     })
 
 
-app.mount("/static", StaticFiles(directory="static"), name="static")
+_static_dir = os.path.join(os.path.dirname(__file__), "static")
+app.mount("/static", StaticFiles(directory=_static_dir), name="static")
 
 
 @app.get("/")
 async def root():
-    return FileResponse("static/index.html")
+    return FileResponse(os.path.join(_static_dir, "index.html"))
