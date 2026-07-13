@@ -5,9 +5,9 @@ version = "1.0.0"
 id = "3B4_FFSkEVBkAeYMFRJ2e"
 
 [[services]]
-localPort = 8001
+localPort = 8000
 name = "Phosphene Simulator"
 paths = ["/"]
 
 [services.development]
-run = "cd /home/runner/workspace/artifacts/phosphene-sim && uvicorn main:app --host 0.0.0.0 --port 8001 --reload"
+run = "sleep infinity"
